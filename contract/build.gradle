@@ -1,0 +1,141 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        maven {
+            credentials {
+                username = System.getenv("ARTIFACTORY_USR")
+                password = System.getenv("ARTIFACTORY_PSW")
+            }
+            def uri = uri(System.getenv("ARTIFACTORY_URL"))
+            url uri.resolve("gradle-dev")
+        }
+    }
+
+    dependencies {
+        classpath("org.jfrog.buildinfo:build-info-extractor-gradle:4.21.0")
+    }
+}
+
+plugins{
+    id 'com.jfrog.artifactory'
+    id 'kotlin'
+    id 'maven-publish'
+    id 'net.corda.plugins.cordapp'
+    id 'org.jetbrains.kotlin.plugin.noarg' version '1.3.61'
+    id 'org.jetbrains.kotlin.plugin.jpa' version '1.3.61'
+}
+
+noArg {
+    annotation("org.example.test.contract.input.state.NoArgConstructor")
+}
+
+jar.baseName = "test-contract"
+
+cordapp {
+    targetPlatformVersion 10
+    minimumPlatformVersion 4
+    contract {
+        name "Test contracts"
+        vendor "example.org"
+        licence "Apache License, Version 2.0"
+        versionId 1
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.61"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.3.61"
+    implementation "org.joda:joda-money:1.0.1"
+
+    cordaCompile "net.corda:corda-core:$corda_release_version"
+    cordaCompile "net.corda:corda-node:$corda_release_version"
+    cordaCompile 'com.h2database:h2:1.4.198' // H2 supports window functions like `PARTITION BY` only started from 1.4.198 version
+    cordaCompile "net.corda:corda-jackson:$corda_release_version"
+    cordaCompile "io.netty:netty-all:$netty_version"
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {
+    kotlinOptions {
+        languageVersion = "1.2"
+        apiVersion = "1.2"
+        jvmTarget = "1.8"
+        javaParameters = true
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// Generate Zip for migration files:
+task archiveMigrations(type: Zip) {
+    archiveFileName.set("test-cordapp-migrations.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("migrations-files"))
+    from(layout.buildDirectory.dir("resources/main/migration"))
+}
+
+tasks {
+    test {
+        finalizedBy("archiveMigrations")
+    }
+}
+
+// Publication configuration:
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'org.example'
+            artifactId = 'test-contract'
+            version = project.version
+            from components.java
+        }
+
+        def zipFile = file("$buildDir/migrations-files/test-cordapp-migrations.zip")
+        def migrationArtifact = artifacts.add("archives", zipFile) {
+            type = "zip"
+            builtBy("archiveMigrations")
+        }
+
+        migrationPublication(MavenPublication) {
+            groupId = "test.sql-migrations.Kotlin"
+            version = System.getenv("TAG_NAME") ?: "0.0.1-SNAPSHOT"
+            artifactId = "ng-test-cordapp"
+            artifact(migrationArtifact)
+        }
+    }
+}
+
+// Artifactory publish configuration:
+artifactory {
+    contextUrl = System.getenv("ARTIFACTORY_URL")
+
+    if (System.getProperty("PUBLISH_MIGRATIONS") == null) {
+        publish {
+            repository {
+                repoKey = "gradle-dev-local"
+                username = System.getenv("ARTIFACTORY_USR")
+                password = System.getenv("ARTIFACTORY_PSW")
+                maven = true
+            }
+            defaults {
+                publications('maven')
+                publishArtifacts = true
+                publishPom = true
+            }
+        }
+    } else if (System.getProperty("PUBLISH_MIGRATIONS").toBoolean()) {
+        publish {
+            repository {
+                repoKey = "generic-local"
+                username = System.getenv("ARTIFACTORY_USR")
+                password = System.getenv("ARTIFACTORY_PSW")
+                maven = true
+            }
+            defaults {
+                publications('migrationPublication')
+                publishArtifacts = true
+                publishPom = true
+            }
+        }
+    }
+}

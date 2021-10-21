@@ -1,0 +1,49 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet dbms="postgresql" id="add-test-schema" author="Example">
+        <createTable tableName="test_attachment_entity" schemaName="test">
+            <column name="search" type="varchar"/>
+            <column name="attachment_hash" type="varchar"/>
+            <column name="participants" type="varchar"/>
+            <column name="output_index" type="integer"/>
+            <column name="transaction_id" type="varchar"/>
+        </createTable>
+
+        <createIndex
+                schemaName="test"
+                tableName="test_attachment_entity"
+                indexName="idx_test_att_transaction_id_output_index">
+            <column name="transaction_id"/>
+            <column name="output_index"/>
+        </createIndex>
+
+        <createTable tableName="test_attachment" schemaName="test">
+            <column name="attachment_id" type="uuid"/>
+            <column name="updated_date" type="timestamp with time zone"/>
+            <column name="attachment_corda_id" type="varchar"/>
+            <column name="attachment_name" type="varchar"/>
+            <column name="uploaded_by" type="varchar"/>
+            <column name="uploaded_date" type="timestamp with time zone"/>
+            <column name="output_index" type="integer"/>
+            <column name="transaction_id" type="varchar"/>
+        </createTable>
+
+        <createIndex schemaName="test"
+                     tableName="test_attachment"
+                     indexName="idx_attach_infos_transaction_id_output_index">
+            <column name="transaction_id"/>
+            <column name="output_index"/>
+        </createIndex>
+
+        <createIndex
+                schemaName="test"
+                tableName="test_attachment"
+                indexName="idx_attach_infos_attachment_id_updated_date">
+            <column name="attachment_id"/>
+            <column name="updated_date"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
