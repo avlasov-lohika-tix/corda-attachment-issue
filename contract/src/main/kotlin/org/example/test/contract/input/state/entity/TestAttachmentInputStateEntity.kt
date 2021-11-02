@@ -15,10 +15,12 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import org.example.test.contract.input.state.NoArgConstructor
 import org.example.test.contract.input.state.converter.ParticipantConverter
+import org.hibernate.Hibernate
 import org.hibernate.annotations.Fetch
 import org.hibernate.annotations.FetchMode
 import java.io.Serializable
 import java.time.Instant
+import java.util.Objects
 import java.util.UUID
 
 @Entity
@@ -52,8 +54,6 @@ data class TestAttachment(
     @Id
     @Column(name = "updated_date")
     val updatedDate: Instant = Instant.now(),
-    @Column(name = "attachment_corda_id")
-    val cordaId: String,
     @Column(name = "attachment_name")
     val name: String,
     @Column(name = "uploaded_by")

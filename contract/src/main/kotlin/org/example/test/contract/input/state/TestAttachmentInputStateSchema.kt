@@ -20,7 +20,6 @@ object TestAttachmentInputStateSchemaV1 : MappedSchema(
                     attachmentId = it.attachmentId,
                     name = it.attachmentName,
                     uploadedBy = it.uploadedBy,
-                    cordaId = it.attachmentCordaId,
                     uploadedDate = it.uploadedDate
                 )
             }

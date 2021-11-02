@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet dbms="postgresql" id="test-attachment-schema-v2" author="Example">
+        <createTable tableName="attachment_data" schemaName="test">
+            <column name="id" type="uuid"/>
+            <column name="content" type="blob"/>
+            <column name="output_index" type="integer"/>
+            <column name="transaction_id" type="varchar"/>
+        </createTable>
+
+        <createIndex tableName="attachment_data" indexName="attachment_idx" schemaName="test">
+            <column name="id"/>
+        </createIndex>
+        <createIndex
+                schemaName="test"
+                tableName="attachment_data"
+                indexName="idx_attachment_data_id_output_index">
+            <column name="transaction_id"/>
+            <column name="output_index"/>
+        </createIndex>
+
+        <dropColumn tableName="test_attachment" schemaName="test">
+            <column name="attachment_corda_id"/>
+        </dropColumn>
+    </changeSet>
+
+</databaseChangeLog>

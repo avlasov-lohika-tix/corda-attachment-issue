@@ -17,27 +17,24 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
-import org.example.test.contract.input.state.AttachmentMetadata
-import org.example.test.contract.input.state.TestAttachmentInputState
-import org.example.test.contract.input.state.TestAttachmentInputStateContract
-import org.example.test.workflow.AttachmentUtils
+import org.example.test.contract.input.state.AttachmentDataState
+import org.example.test.contract.input.state.AttachmentDataStateContract
 import org.example.test.workflow.CommonFlowSteps
-import org.example.test.workflow.input.state.repository.AttachmentInputStateTestRepository
+import java.util.UUID
 
-object AttachmentInputStateTestFlow {
+object AttachmentDataFlow {
 
     @InitiatingFlow
     @StartableByRPC
     @CordaSerializable
-    class AttachmentInputStateTestUpload(
-        private val search: String,
+    class AttachmentDataUploadFlow(
+        private val attachmentMetadataId: UUID,
+        private val content: ByteArray,
         private val party: String
     ) : FlowLogic<SignedTransaction>() {
 
-        private fun attachmentInputStateTestRepository() = serviceHub.cordaService(AttachmentInputStateTestRepository::class.java)
-
         companion object {
-            val logger = loggerFor<AttachmentInputStateTestUpload>()
+            val logger = loggerFor<AttachmentDataUploadFlow>()
         }
 
         override val progressTracker = CommonFlowSteps.commonTracker()
@@ -45,7 +42,7 @@ object AttachmentInputStateTestFlow {
         @Suspendable
         override fun call(): SignedTransaction {
             progressTracker.currentStep = CommonFlowSteps.SET_UP
-            logger.info("AttachmentInputStateTestUpload: ${CommonFlowSteps.SET_UP.label}")
+            logger.info("AttachmentDataUploadFlow: ${CommonFlowSteps.SET_UP.label}")
 
             val notary = serviceHub.networkMapCache.notaryIdentities.first()
 
@@ -55,47 +52,29 @@ object AttachmentInputStateTestFlow {
             )
 
             progressTracker.currentStep = CommonFlowSteps.BUILDING_TRANSACTION
-            logger.info("AttachmentInputStateTestUpload: ${CommonFlowSteps.BUILDING_TRANSACTION.label}")
+            logger.info("AttachmentDataUploadFlow: ${CommonFlowSteps.BUILDING_TRANSACTION.label}")
 
-            val txCommand = Command(TestAttachmentInputStateContract.Commands.Issue(), participants.map { it.owningKey })
+            val txCommand = Command(AttachmentDataStateContract.Commands.Issue(), participants.map { it.owningKey })
             val builder = TransactionBuilder(notary)
 
-            val previousStateStateAndRef = attachmentInputStateTestRepository().findUnconsumedState(search)
-                ?.also { builder.addInputState(it) }
-
-            val newAttachmentMetadata = AttachmentMetadata(
-                uploadedBy = "me",
-                attachmentName = AttachmentUtils.filename
-            )
-
-            val testAttachmentState = TestAttachmentInputState(
-                participants = participants,
-                search = search,
-                attachments = previousStateStateAndRef.let {
-                    it?.state?.data?.attachments.orEmpty() + newAttachmentMetadata
-                }
-            )
-
-            subFlow(AttachmentDataFlow.AttachmentDataUploadFlow(
-                newAttachmentMetadata.attachmentId,
-                AttachmentUtils.contentByteArray,
-                party
-            ))
-
-            builder.addOutputState(testAttachmentState, TestAttachmentInputStateContract.ID)
+            builder.addOutputState(AttachmentDataState(
+                attachmentId = attachmentMetadataId,
+                content = content,
+                participants = participants
+            ), AttachmentDataStateContract.ID)
 
             builder.addCommand(txCommand)
 
             progressTracker.currentStep = CommonFlowSteps.VERIFYING_TRANSACTION
-            logger.info("AttachmentInputStateTestUpload: ${CommonFlowSteps.VERIFYING_TRANSACTION.label}")
+            logger.info("AttachmentDataUploadFlow: ${CommonFlowSteps.VERIFYING_TRANSACTION.label}")
             builder.verify(serviceHub)
 
             progressTracker.currentStep = CommonFlowSteps.SIGNING_TRANSACTION
-            logger.info("AttachmentInputStateTestUpload: ${CommonFlowSteps.SIGNING_TRANSACTION.label}")
+            logger.info("AttachmentDataUploadFlow: ${CommonFlowSteps.SIGNING_TRANSACTION.label}")
             val selfSignedTx = serviceHub.signInitialTransaction(builder)
 
             progressTracker.currentStep = CommonFlowSteps.GATHERING_SIGNS
-            logger.info("AttachmentInputStateTestUpload: ${CommonFlowSteps.GATHERING_SIGNS.label}")
+            logger.info("AttachmentDataUploadFlow: ${CommonFlowSteps.GATHERING_SIGNS.label}")
 
             val me = serviceHub.myInfo.legalIdentities.first()
             val otherPartiesSessions = participants
@@ -113,7 +92,7 @@ object AttachmentInputStateTestFlow {
             )
 
             progressTracker.currentStep = CommonFlowSteps.FINALISING_TRANSACTION
-            logger.info("AttachmentInputStateTestUpload: ${CommonFlowSteps.FINALISING_TRANSACTION.label}")
+            logger.info("AttachmentDataUploadFlow: ${CommonFlowSteps.FINALISING_TRANSACTION.label}")
 
             return subFlow(
                 FinalityFlow(
@@ -125,26 +104,26 @@ object AttachmentInputStateTestFlow {
         }
     }
 
-    @InitiatedBy(AttachmentInputStateTestUpload::class)
-    class AttachmentInputStateTestUploadAcceptor(val session: FlowSession) : FlowLogic<SignedTransaction>() {
+    @InitiatedBy(AttachmentDataUploadFlow::class)
+    class AttachmentDataUploadFlowAcceptor(val session: FlowSession) : FlowLogic<SignedTransaction>() {
 
         @Suspendable
         override fun call(): SignedTransaction {
-            AttachmentInputStateTestUpload.logger.info("Called AttachmentInputStateTestUpload responder for $session")
+            logger.info("Called AttachmentDataUploadFlow responder for $session")
 
             val signTransactionFlow = object : SignTransactionFlow(session) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     "Flow should has one command." using (stx.tx.commands.size == 1)
 
-                    "Single command should be Upload." using (stx.tx.commands.single().value is TestAttachmentInputStateContract.Commands.Issue)
+                    "Single command should be Issue." using (stx.tx.commands.single().value is AttachmentDataStateContract.Commands.Issue)
 
                     val outputs = stx.tx.outputs.map { it.data }
-                    "All output states should be the TestAttachmentInputState." using (outputs.all { it is TestAttachmentInputState })
+                    "All output states should be the TestAttachmentInputState." using (outputs.all { it is AttachmentDataState })
                 }
             }
             val txId = subFlow(signTransactionFlow).id
             return subFlow(ReceiveFinalityFlow(session, expectedTxId = txId))
         }
     }
-
+    
 }

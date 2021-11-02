@@ -6,11 +6,11 @@ import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
 import net.corda.core.transactions.LedgerTransaction
 
-class TestAttachmentInputStateContract: Contract {
+class AttachmentDataStateContract: Contract {
 
     companion object {
         // Used to identify our contract when building a transaction.
-        const val ID = "org.example.test.contract.input.state.TestAttachmentInputStateContract"
+        const val ID = "org.example.test.contract.input.state.AttachmentDataStateContract"
     }
 
     // A transaction is valid if the verify() function of the contract of all the transaction's input and output states
@@ -22,17 +22,12 @@ class TestAttachmentInputStateContract: Contract {
             is Commands.Issue -> requireThat {
                 tx.outputsOfType<TestAttachmentInputState>().single()
             }
-            is Commands.Share -> requireThat {
-                tx.outputsOfType<TestAttachmentInputState>().single()
-            }
         }
-
     }
 
     // Used to indicate the transaction's intent.
     interface Commands : CommandData {
         class Issue : Commands
-        class Share : Commands
     }
 
 }

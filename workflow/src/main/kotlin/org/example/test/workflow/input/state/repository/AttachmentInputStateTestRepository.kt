@@ -9,6 +9,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.SingletonSerializeAsToken
 import org.example.test.contract.input.state.TestAttachmentInputState
 import org.example.test.contract.input.state.entity.TestAttachmentInputStateEntity
+import java.util.UUID
 
 @CordaService
 class AttachmentInputStateTestRepository(

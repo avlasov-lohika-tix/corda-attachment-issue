@@ -57,6 +57,8 @@ dependencies {
     cordaCompile "net.corda:corda-core:$corda_release_version"
     cordaCompile "net.corda:corda-rpc:$corda_release_version"
     cordaCompile "io.netty:netty-all:$netty_version"
+    cordaCompile "com.r3.corda.lib.reissuance:reissuance-cordapp-contracts:$reissuance_release_version"
+    cordaCompile "com.r3.corda.lib.reissuance:reissuance-cordapp-workflows:$reissuance_release_version"
 
     cordaRuntime "net.corda:corda:$corda_release_version"
     cordaRuntime "org.apache.logging.log4j:log4j-slf4j-impl:2.11.2"
